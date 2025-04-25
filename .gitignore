@@ -1,3 +1,38 @@
-# Visual Studio caches & temp files
+## Build outputs
+bin/
+obj/
+
+## Visual Studio workspace settings
 .vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## Rider
+.idea/
+
+## NuGet
+*.nupkg
+packages/
+# Uncomment if you have a global packages folder
+# **/packages/*
+
+## Visual Studio Code
+.vscode/
+
+## OS files
+Thumbs.db
+.DS_Store
+
+## Resharper
+_ReSharper*/
+*.DotSettings.user
+
+## IIS Express
+/.vs/
+/IISExpress/
+
+## Publish artifacts
+publish/
 
