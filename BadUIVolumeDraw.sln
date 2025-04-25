@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.13.35931.197 d17.13
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BadUIVolumeDraw", "BadUIVolumeDraw.csproj", "{9012ECB5-906A-4527-8FD9-1C1F3C5D864F}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{9012ECB5-906A-4527-8FD9-1C1F3C5D864F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9012ECB5-906A-4527-8FD9-1C1F3C5D864F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9012ECB5-906A-4527-8FD9-1C1F3C5D864F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9012ECB5-906A-4527-8FD9-1C1F3C5D864F}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {4E9FF8BB-8F55-435E-8F28-2FA140B8354C}
+	EndGlobalSection
+EndGlobal

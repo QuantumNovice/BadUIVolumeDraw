@@ -16,6 +16,11 @@ using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.Transforms.Onnx;
 using System.Windows.Controls.Primitives;
 using Tesseract;
+using System.IO;
+using Rect = System.Windows.Rect;
+using System;
+using System.Drawing;
+
 
 
 //using System.Windows.Forms; // for NotifyIcon
@@ -46,11 +51,12 @@ namespace BadUIVolumeDraw
     public partial class MainWindow : Window
     {
         private bool _drawing = false;
-        private List<Point> _points = new List<Point>();
+        private List<System.Windows.Point> _points = new List<System.Windows.Point>();
         private readonly string modelPath = "Models/mnist-12.onnx";
         private readonly MLContext mlContext = new();
         private PredictionEngine<MnistImage, MnistPrediction> predictionEngine;
         private System.Windows.Forms.NotifyIcon trayIcon;
+        private readonly TesseractEngine _engine;
 
 
         public MainWindow()
@@ -58,7 +64,11 @@ namespace BadUIVolumeDraw
             InitializeComponent();
 
 
-            
+            var tessData = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tessdata");
+            _engine = new TesseractEngine(tessData, "eng", EngineMode.LstmOnly);
+            _engine.SetVariable("tessedit_char_whitelist", "0123456789");
+            _engine.SetVariable("classify_bln_numeric_mode", "1");
+
 
             trayIcon = new System.Windows.Forms.NotifyIcon();
             trayIcon.Text = "Volume UI";
@@ -67,7 +77,7 @@ namespace BadUIVolumeDraw
             var popup = this;
             // Right-click menu
             var menu = new System.Windows.Forms.ContextMenuStrip();
-            menu.Items.Add("About", null, (s, ev) => MessageBox.Show("We were trying to create bad UI/UX "));
+            menu.Items.Add("About", null, (s, ev) => MessageBox.Show("We were trying to create bad UI/UX so we said how about this idea. "));
             menu.Items.Add("Exit", null, (s, ev) => Application.Current.Shutdown());
             trayIcon.ContextMenuStrip = menu;
 
@@ -114,6 +124,40 @@ namespace BadUIVolumeDraw
 
         }
 
+
+        private Bitmap GetBinarizedBitmapFromCanvas()
+        {
+            const int RENDER_SIZE = 200;
+
+            // 1) Render WPF Canvas to bitmap
+            var rtb = new RenderTargetBitmap(RENDER_SIZE, RENDER_SIZE, 96, 96, PixelFormats.Pbgra32);
+            rtb.Render(DrawCanvas);
+
+            // 2) Encode to a MemoryStream as BMP
+            var encoder = new BmpBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(rtb));
+            using var ms = new MemoryStream();
+            encoder.Save(ms);
+            ms.Seek(0, SeekOrigin.Begin);
+
+            // 3) Load into System.Drawing.Bitmap
+            var bmp = new Bitmap(ms);
+
+            // 4) Binarize + invert: black strokes on white bg
+            for (int y = 0; y < bmp.Height; y++)
+            {
+                for (int x = 0; x < bmp.Width; x++)
+                {
+                    var px = bmp.GetPixel(x, y);
+                    var gray = (px.R + px.G + px.B) / 3;
+                    var binary = gray < 128 ? 0 : 255;
+                    bmp.SetPixel(x, y, System.Drawing.Color.FromArgb(binary, binary, binary));
+                }
+            }
+
+            return bmp;
+        }
+
         private void Canvas_MouseDown(object sender, MouseButtonEventArgs e)
         {
             _drawing = true;
@@ -127,12 +171,12 @@ namespace BadUIVolumeDraw
         {
             if (_drawing && e.LeftButton == MouseButtonState.Pressed)
             {
-                Point p = e.GetPosition(DrawCanvas);
+                System.Windows.Point p = e.GetPosition(DrawCanvas);
                 _points.Add(p);
 
                 Ellipse dot = new Ellipse
                 {
-                    Fill = Brushes.Black,
+                    Fill = System.Windows.Media.Brushes.Black,
                     Width = 12,
                     Height = 12
                 };
@@ -199,24 +243,69 @@ namespace BadUIVolumeDraw
 
         private void RecognizeDigitAndSetVolume()
         {
-            float[] input = GetFormattedInputFromCanvas();
+            int? digit = null;
 
-            var prediction = predictionEngine.Predict(new MnistImage { PixelValues = input });
-
-            if (prediction?.PredictedLabels == null)
+            // 1) Try Tesseract OCR
+            try
             {
-                MessageBox.Show("Prediction failed. Check model input/output names.");
-                return;
+                using var bmp = GetBinarizedBitmapFromCanvas();
+                using var engine = new TesseractEngine(
+                    System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tessdata"),
+                    "eng",
+                    EngineMode.LstmOnly);
+                engine.SetVariable("tessedit_char_whitelist", "0123456789");
+                engine.SetVariable("classify_bln_numeric_mode", "1");
+
+                using var pix = PixConverter.ToPix(bmp);
+                using var page = engine.Process(pix, PageSegMode.SingleChar);
+
+                var text = page.GetText().Trim();
+                if (int.TryParse(text, out int ocrDigit) && ocrDigit is >= 0 and <= 9)
+                {
+                    digit = ocrDigit;
+                }
+            }
+            catch
+            {
+                // swallow; we'll fall back
             }
 
-            int digit = prediction.PredictedLabels
-                .ToList()
-                .IndexOf(prediction.PredictedLabels.Max());
+            // 2) Fallback to MNIST ONNX if OCR didn't yield a valid digit
+            if (digit == null)
+            {
+                try
+                {
+                    // Get your 28×28 float[] input
+                    float[] input = GetFormattedInputFromCanvas();
+                    var prediction = predictionEngine.Predict(new MnistImage { PixelValues = input });
 
+                    if (prediction?.PredictedLabels != null)
+                    {
+                        digit = prediction.PredictedLabels
+                                  .Select((score, idx) => (score, idx))
+                                  .OrderByDescending(p => p.score)
+                                  .First().idx;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("MNIST fallback failed: " + ex.Message);
+                }
+            }
 
-            DigitLabel.Content = $"Digit: {digit}";
-            SetSystemVolume(digit / 10f);
+            // 3) Apply result (or report failure)
+            if (digit != null)
+            {
+                DigitLabel.Content = $"Digit: {digit}";
+                SetSystemVolume(digit.Value / 10f);
+            }
+            else
+            {
+                DigitLabel.Content = "Unable to recognize digit.";
+            }
         }
+
+
 
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
