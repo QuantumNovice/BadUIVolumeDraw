@@ -1,0 +1,43 @@
+﻿<Window x:Class="BadUIVolumeDraw.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:BadUIVolumeDraw"
+        mc:Ignorable="d"
+        WindowStyle="None" 
+        AllowsTransparency="True"
+        Background="Transparent"
+        ShowInTaskbar="False"
+        Topmost="True"
+        Width="300" Height="150"
+        ResizeMode="NoResize">
+    <Border Background="White" CornerRadius="10" Padding="20" Opacity="0.95">
+
+        <Grid>
+
+
+            <Canvas Name="DrawCanvas" Background="White"
+                MouseDown="Canvas_MouseDown"
+                MouseMove="Canvas_MouseMove"
+                MouseUp="Canvas_MouseUp"/>
+            <Button Content="×"
+            Width="24" Height="24"
+            FontSize="14"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Top"
+            Margin="5"
+            Click="CloseButton_Click"
+            Background="Transparent"
+            BorderBrush="{x:Null}"
+            Cursor="Hand" RenderTransformOrigin="0.528,-0.566"/>
+            <!--
+        <Button Content="Set Volume" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="10"
+                Click="SetVolume_Click"/>-->
+        <Label Name="DigitLabel" Content="Draw a digit (0-9) to set volume" 
+HorizontalAlignment="Left" VerticalAlignment="Bottom"/>
+
+    </Grid>
+    </Border>
+
+</Window>
