@@ -7,3 +7,5 @@
 # Installer
 
 - Look at release page.
+
+![](demo.gif)
